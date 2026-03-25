@@ -1,4 +1,8 @@
+# pyright: reportCallIssue=false, reportArgumentType=false
+
 import os
+import random
+from datetime import datetime
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -10,9 +14,9 @@ from models import (
     TokenHolding, Transaction, MarketplaceListing,
     ProjectDocument, ProjectUpdate, Reward, TokenLedger
 )
-from utils import (
-    create_jwt, get_auth_user, generate_tx_hash, generate_token_id,
-    check_rate_limit, calculate_risk_score, risk_level_from_score
+from utils import (  # type: ignore[attr-defined]
+    create_jwt, get_auth_user, generate_tx_hash, generate_token_id,  # type: ignore[attr-defined]
+    check_rate_limit, calculate_risk_score, risk_level_from_score  # type: ignore[attr-defined]
 )
 from seed import seed_data
 from pdf_utils import generate_certificate_pdf
@@ -124,6 +128,13 @@ def _add_ledger_entry(tx_hash, tx_type, user_id, project_id,
     return entry
 
 
+def _random_india_coordinates():
+    """Return demo coordinates within India bounding box."""
+    lat = round(random.uniform(8.0, 37.5), 6)
+    lng = round(random.uniform(68.0, 97.5), 6)
+    return lat, lng
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # ROOT / HEALTH
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -200,6 +211,56 @@ def investor_wallet():
     })
 
 
+@app.post("/api/investor/withdraw")
+def investor_withdraw():
+    auth_user = get_auth_user()
+    if not auth_user:
+        return jsonify({"error": "Unauthorized"}), 401
+    if auth_user["role"] != "INVESTOR":
+        return jsonify({"error": "Forbidden"}), 403
+
+    data = request.json or {}
+    raw_amount = data.get("amount", 0)
+
+    try:
+        amount = round(float(raw_amount), 2)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid amount"}), 400
+
+    if amount <= 0:
+        return jsonify({"error": "Amount must be greater than 0"}), 400
+
+    user = User.query.get(auth_user["user_id"])
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    current_balance = float(user.wallet_balance or 0)
+    if amount > current_balance:
+        return jsonify({"error": "Insufficient wallet balance"}), 400
+
+    user.wallet_balance = round(current_balance - amount, 2)
+
+    tx_hash = generate_tx_hash()
+    tx = Transaction(
+        tx_hash=tx_hash,
+        user_id=user.id,
+        project_id=None,
+        tx_type="WITHDRAW",
+        amount=amount,
+        token_count=0,
+        status="COMPLETED",
+        created_at=datetime.utcnow(),
+    )
+    db.session.add(tx)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Withdraw successful",
+        "tx_hash": tx_hash,
+        "updated_balance": user.wallet_balance,
+    })
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # FILE UPLOAD
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -217,7 +278,7 @@ def upload_file():
     if not f or f.filename == "":
         return jsonify({"error": "No file selected"}), 400
 
-    filename = secure_filename(f.filename)
+    filename = secure_filename(f.filename or "")
     if not filename:
         return jsonify({"error": "Invalid filename"}), 400
 
@@ -420,6 +481,9 @@ def invest():
         if tokens <= 0:
             return jsonify({"error": "Project is at funding capacity"}), 400
 
+    platform_fee = round(amount * 0.01, 2)
+    total_amount = round(amount + platform_fee, 2)
+
     tx_hash = generate_tx_hash()
     token_id = generate_token_id()
 
@@ -461,7 +525,7 @@ def invest():
     # ── Deduct from investor wallet balance ───────────────────────────────────
     investor = User.query.get(auth_user["user_id"])
     if investor:
-        investor.wallet_balance = max(0.0, float(investor.wallet_balance or 0) - amount)
+        investor.wallet_balance = max(0.0, float(investor.wallet_balance or 0) - total_amount)
 
     # ── Transaction record ────────────────────────────────────────────────────
     tx = Transaction(
@@ -492,6 +556,8 @@ def invest():
         "tokens_minted": tokens,
         "tokens_issued": tokens,
         "amount_invested": amount,
+        "platform_fee": platform_fee,
+        "total_amount": total_amount,
         "funding_raised": p.funding_raised,
         "funding_target": p.funding_target,
     })
@@ -873,6 +939,9 @@ def issuer_create_project():
     except (TypeError, ValueError):
         return jsonify({"error": "Invalid numeric fields"}), 400
 
+    if latitude is None or longitude is None:
+        latitude, longitude = _random_india_coordinates()
+
     if not title or not location or not description:
         return jsonify({"error": "Missing required fields: title, location, description"}), 400
     if funding_target <= 0 or token_price <= 0:
@@ -1138,6 +1207,47 @@ def admin_list_projects():
         "status": p.status,
         "issuer_id": p.issuer_id,
     } for p in projects])
+
+
+@app.get("/api/admin/revenue")
+def admin_revenue_overview():
+    auth_user = get_auth_user()
+    if not auth_user:
+        return jsonify({"error": "Unauthorized"}), 401
+    if auth_user["role"] != "ADMIN":
+        return jsonify({"error": "Forbidden"}), 403
+
+    total_investments = float(
+        db.session.query(db.func.coalesce(db.func.sum(Transaction.amount), 0.0))
+        .filter(Transaction.tx_type == "MINT")
+        .scalar()
+    )
+    total_fees_collected = round(total_investments * 0.01, 2)
+    total_users = User.query.count()
+
+    return jsonify({
+        "total_fees_collected": total_fees_collected,
+        "total_investments": round(total_investments, 2),
+        "total_users": total_users,
+    })
+
+
+@app.get("/api/admin/platform-stats")
+def get_platform_stats():
+    """Demo-safe platform KPI stats for admin dashboard cards."""
+    auth_user = get_auth_user()
+    if not auth_user:
+        return jsonify({"error": "Unauthorized"}), 401
+    if auth_user["role"] != "ADMIN":
+        return jsonify({"error": "Forbidden"}), 403
+
+    return jsonify({
+        "platform_health": "Healthy",
+        "active_projects": random.randint(10, 25),
+        "verified_developers": random.randint(5, 15),
+        "pending_approvals": random.randint(1, 5),
+        "fraud_alerts": random.randint(0, 2),
+    })
 
 
 @app.get("/api/admin/issuers")

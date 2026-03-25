@@ -191,16 +191,16 @@ export function IssuerDashboard({ onNavigate }: IssuerDashboardProps) {
             <BarChart3 className="w-4 h-4" />
             <span>Dashboard</span>
             <span className="text-border">/</span>
-            <span className="text-foreground font-medium">Issuer Overview</span>
+            <span className="text-foreground font-medium">Project Developer Overview</span>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Issuer Dashboard</h1>
+          <h1 className="text-2xl font-bold text-foreground">Project Developer Dashboard</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Maharashtra State Road Development Corporation
           </p>
         </div>
         <Button onClick={() => onNavigate("create-bond")} className="rounded-xl shadow-md">
           <FileText className="w-4 h-4 mr-2" />
-          Create New Bond Listing
+          Launch Investment Opportunity
         </Button>
       </div>
 

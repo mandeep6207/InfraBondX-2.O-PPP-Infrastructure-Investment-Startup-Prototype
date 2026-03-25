@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/ca
 import { Button } from "@/app/components/ui/button";
 import { ImpactCard } from "@/app/components/ImpactCard";
 import { apiGet } from "@/app/services/api";
+import { adminGetRevenue, getPlatformStats } from "@/app/services/admin";
 import {
   BarChart,
   Bar,
@@ -54,12 +55,33 @@ type FraudAlertDTO = {
   severity: "LOW" | "MEDIUM" | "HIGH";
 };
 
+type PlatformStatsDTO = {
+  platform_health: string;
+  active_projects: number;
+  verified_developers: number;
+  pending_approvals: number;
+  fraud_alerts: number;
+};
+
+const FALLBACK_PLATFORM_STATS: PlatformStatsDTO = {
+  platform_health: "Healthy",
+  active_projects: 10,
+  verified_developers: 5,
+  pending_approvals: 2,
+  fraud_alerts: 0,
+};
+
 export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   const [projects, setProjects] = useState<AdminProjectDTO[]>([]);
   const [alerts, setAlerts] = useState<FraudAlertDTO[]>([]);
   const [loading, setLoading] = useState(false);
-  const [issuerCount, setIssuerCount] = useState(0);
+  const [platformStats, setPlatformStats] = useState<PlatformStatsDTO>(FALLBACK_PLATFORM_STATS);
   const [escrowTotals, setEscrowTotals] = useState({ locked: 0, released: 0 });
+  const [revenueOverview, setRevenueOverview] = useState({
+    total_fees_collected: 0,
+    total_investments: 0,
+    total_users: 0,
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -87,12 +109,32 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           setAlerts([]);
         }
 
+        const dataS = await getPlatformStats();
+        if (dataS && !dataS.error) {
+          setPlatformStats({
+            platform_health: String(dataS.platform_health || "Healthy"),
+            active_projects: Number(dataS.active_projects || FALLBACK_PLATFORM_STATS.active_projects),
+            verified_developers: Number(
+              dataS.verified_developers || FALLBACK_PLATFORM_STATS.verified_developers
+            ),
+            pending_approvals: Number(dataS.pending_approvals || FALLBACK_PLATFORM_STATS.pending_approvals),
+            fraud_alerts: Number(dataS.fraud_alerts || FALLBACK_PLATFORM_STATS.fraud_alerts),
+          });
+        } else {
+          setPlatformStats(FALLBACK_PLATFORM_STATS);
+        }
+
         setProjects(Array.isArray(dataP) ? dataP : []);
         setAlerts(Array.isArray(dataA) ? dataA : []);
 
-        // Fetch issuer count
-        const dataI = await apiGet("/admin/issuers", token);
-        if (Array.isArray(dataI)) setIssuerCount(dataI.length);
+        const revData = await adminGetRevenue();
+        if (revData && !revData.error) {
+          setRevenueOverview({
+            total_fees_collected: Number(revData.total_fees_collected || 0),
+            total_investments: Number(revData.total_investments || 0),
+            total_users: Number(revData.total_users || 0),
+          });
+        }
 
         // Compute escrow totals from projects (transparency endpoint per project)
         let totalLocked = 0;
@@ -102,8 +144,8 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           try {
             const t = await apiGet(`/projects/${p.id}/transparency`, token);
             if (t && !t.error) {
-              totalLocked += t.total_locked || 0;
-              totalReleased += t.total_released || 0;
+              totalLocked += t.locked || 0;
+              totalReleased += t.released || 0;
             }
           } catch {}
         }
@@ -111,6 +153,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       } catch {
         setProjects([]);
         setAlerts([]);
+        setPlatformStats(FALLBACK_PLATFORM_STATS);
       } finally {
         setLoading(false);
       }
@@ -230,9 +273,9 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             <BarChart3 className="w-4 h-4" />
             <span>Dashboard</span>
             <span className="text-border">/</span>
-            <span className="text-foreground font-medium">Administration</span>
+            <span className="text-foreground font-medium">Platform Operations</span>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Platform Administration</h1>
+          <h1 className="text-2xl font-bold text-foreground">Platform Operations</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Monitor platform health, verify entities, and manage approvals
           </p>
@@ -240,7 +283,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl">
           <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-            Platform Healthy
+            Platform {platformStats.platform_health}
           </span>
         </div>
       </div>
@@ -251,7 +294,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           <ImpactCard
             icon={Briefcase}
             label="Active Projects"
-            value={loading ? "—" : String(activeProjects.length)}
+            value={loading ? "—" : String(platformStats.active_projects)}
             color="text-primary"
             className="border-l-primary"
           />
@@ -259,8 +302,8 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         <div className="animate-fade-in-up delay-200">
           <ImpactCard
             icon={Shield}
-            label="Verified Issuers"
-            value={loading ? "—" : String(issuerCount)}
+            label="Verified Project Developers"
+            value={loading ? "—" : String(platformStats.verified_developers)}
             color="text-[#10b981]"
             className="border-l-[#10b981]"
           />
@@ -269,20 +312,40 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           <ImpactCard
             icon={FileCheck}
             label="Pending Approvals"
-            value={loading ? "—" : String(pendingApprovals.filter((x) => x.id !== "none").length)}
+            value={loading ? "—" : String(platformStats.pending_approvals)}
             color="text-[#f59e0b]"
             className="border-l-[#f59e0b]"
+            subtitle="Pending review"
           />
         </div>
         <div className="animate-fade-in-up delay-400">
           <ImpactCard
             icon={AlertTriangle}
             label="Fraud Alerts"
-            value={loading ? "—" : String(alerts.length)}
+            value={loading ? "—" : String(platformStats.fraud_alerts)}
             color="text-[#dc2626]"
             className="border-l-[#dc2626]"
+            subtitle={platformStats.fraud_alerts > 0 ? "Alert active" : "No active alerts"}
           />
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+          Health: {platformStats.platform_health}
+        </span>
+        <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+          Pending: {platformStats.pending_approvals}
+        </span>
+        <span
+          className={`px-3 py-1 text-xs font-semibold rounded-full ${
+            platformStats.fraud_alerts > 0
+              ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+              : "bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300"
+          }`}
+        >
+          Fraud Alerts: {platformStats.fraud_alerts}
+        </span>
       </div>
 
       {/* Charts */}
@@ -327,6 +390,31 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="bg-card/80 backdrop-blur-sm border-border/50 rounded-2xl overflow-hidden">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-primary" />
+            Platform Revenue Overview
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="p-4 rounded-xl border bg-primary/5 border-primary/20">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Fees Collected</p>
+              <p className="text-2xl font-bold mt-1">₹{revenueOverview.total_fees_collected.toLocaleString("en-IN")}</p>
+            </div>
+            <div className="p-4 rounded-xl border bg-emerald-50/60 border-emerald-200/60 dark:bg-emerald-950/20 dark:border-emerald-800/40">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Investments</p>
+              <p className="text-2xl font-bold mt-1">₹{revenueOverview.total_investments.toLocaleString("en-IN")}</p>
+            </div>
+            <div className="p-4 rounded-xl border bg-sky-50/60 border-sky-200/60 dark:bg-sky-950/20 dark:border-sky-800/40">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Users</p>
+              <p className="text-2xl font-bold mt-1">{revenueOverview.total_users.toLocaleString("en-IN")}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Pending Approvals & Alerts */}
       <div className="grid md:grid-cols-2 gap-4">

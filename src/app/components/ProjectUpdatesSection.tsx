@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { formatDistanceToNow, format } from "date-fns";
 import {
   PlayCircle,
   Image as ImageIcon,
@@ -19,6 +18,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { apiGet } from "@/app/services/api";
+import { formatDateTime } from "@/utils/dateFormatter";
 
 interface ProjectUpdatesSectionProps {
   projectId: number;
@@ -251,7 +251,7 @@ export function ProjectUpdatesSection({ projectId }: ProjectUpdatesSectionProps)
                             )}
                             <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                               <Clock className="w-3 h-3" />
-                              {formatDistanceToNow(new Date(update.timestamp), { addSuffix: true })}
+                              {formatDateTime(update.timestamp)}
                             </span>
                           </div>
                         </div>
@@ -287,7 +287,7 @@ export function ProjectUpdatesSection({ projectId }: ProjectUpdatesSectionProps)
 
                         {/* Date detail */}
                         <div className="mt-2 text-[10px] text-muted-foreground">
-                          {format(new Date(update.timestamp), "MMM d, yyyy · h:mm a")}
+                          {formatDateTime(update.timestamp)}
                         </div>
                       </div>
                     </div>

@@ -11,6 +11,7 @@ import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { cn } from "@/lib/utils";
 import { apiGet } from "@/app/services/api";
+import { formatDateTime } from "@/utils/dateFormatter";
 
 type TxDTO = {
   tx_hash: string;
@@ -74,41 +75,35 @@ export function TransactionLedger() {
         );
       } else if (typeFilter === "sell") {
         list = list.filter(
-          (t) => t.type.toLowerCase() === "sell" || t.type.toLowerCase() === "transfer"
+          (t) =>
+            t.type.toLowerCase() === "sell" ||
+            t.type.toLowerCase() === "transfer" ||
+            t.type.toLowerCase() === "withdraw"
         );
       }
     }
 
     if (statusFilter !== "all") {
       if (statusFilter === "completed") {
-        list = list.filter((t) => t.status.toLowerCase() === "success");
+        list = list.filter((t) => {
+          const status = t.status.toLowerCase();
+          return status === "success" || status === "completed";
+        });
       } else if (statusFilter === "pending") {
-        list = list.filter((t) => t.status.toLowerCase() !== "success");
+        list = list.filter((t) => {
+          const status = t.status.toLowerCase();
+          return status !== "success" && status !== "completed";
+        });
       }
     }
 
     return list;
   }, [txs, search, typeFilter, statusFilter]);
 
-  const formatDate = (iso: string) => {
-    try {
-      const d = new Date(iso);
-      return d.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return iso;
-    }
-  };
-
   const exportCSV = () => {
     const headers = ["date_time", "project", "type", "tokens", "amount", "status", "tx_hash"];
     const rows = filteredTxs.map((t) => [
-      formatDate(t.created_at),
+      formatDateTime(t.created_at),
       t.project_title || "Infrastructure Project",
       t.type,
       t.token_count,
@@ -225,13 +220,15 @@ export function TransactionLedger() {
                   </tr>
                 ) : (
                   filteredTxs.map((tx) => {
-                    const isBuy =
-                      tx.type.toLowerCase() === "mint" || tx.type.toLowerCase() === "buy";
-                    const isCompleted = tx.status.toLowerCase() === "success";
+                    const txType = tx.type.toLowerCase();
+                    const isBuy = txType === "mint" || txType === "buy";
+                    const isWithdraw = txType === "withdraw";
+                    const isCompleted =
+                      tx.status.toLowerCase() === "success" || tx.status.toLowerCase() === "completed";
 
                     return (
                       <tr key={tx.tx_hash} className="border-b hover:bg-accent transition-colors">
-                        <td className="py-4 px-4 text-sm">{formatDate(tx.created_at)}</td>
+                        <td className="py-4 px-4 text-sm">{formatDateTime(tx.created_at)}</td>
 
                         <td className="py-4 px-4">
                           <div className="max-w-xs">
@@ -247,7 +244,9 @@ export function TransactionLedger() {
                               "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
                               isBuy
                                 ? "bg-[#10b981]/10 text-[#10b981]"
-                                : "bg-[#f59e0b]/10 text-[#f59e0b]"
+                                : isWithdraw
+                                  ? "bg-[#ef4444]/10 text-[#ef4444]"
+                                  : "bg-[#f59e0b]/10 text-[#f59e0b]"
                             )}
                           >
                             {isBuy ? (
@@ -255,7 +254,7 @@ export function TransactionLedger() {
                             ) : (
                               <ArrowUpRight className="w-3 h-3" />
                             )}
-                            {isBuy ? "Buy" : "Sell"}
+                            {isBuy ? "Buy" : isWithdraw ? "Withdraw" : "Sell"}
                           </div>
                         </td>
 

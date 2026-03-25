@@ -12,6 +12,7 @@ interface CreateBondPageProps {
 export function CreateBondPage({ onNavigate }: CreateBondPageProps) {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const [enableDemoLocation, setEnableDemoLocation] = useState(true);
 
   const [formData, setFormData] = useState({
     projectName: "",
@@ -137,6 +138,9 @@ export function CreateBondPage({ onNavigate }: CreateBondPageProps) {
         roi_percent: roiPercent,
         tenure_months: Math.max(12, tenureYears * 12),
         token_price: tokenPrice,
+
+        // backend auto-assigns random India coordinates when lat/lng are not provided
+        auto_location: enableDemoLocation,
 
         // ✅ For admin approval flow (backend can ignore, but safe for future)
         status: "PENDING",
@@ -286,6 +290,23 @@ export function CreateBondPage({ onNavigate }: CreateBondPageProps) {
                   <p className="text-xs text-muted-foreground mt-1">
                     Include SDG alignment, expected impact, and key features
                   </p>
+                </div>
+
+                <div className="rounded-lg border border-border p-3 bg-muted/30">
+                  <label className="flex items-center gap-3 text-sm font-medium cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={enableDemoLocation}
+                      onChange={(e) => setEnableDemoLocation(e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    Enable Location (Demo)
+                  </label>
+                  {enableDemoLocation && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Auto location assigned from India coordinates on project creation.
+                    </p>
+                  )}
                 </div>
               </div>
             )}

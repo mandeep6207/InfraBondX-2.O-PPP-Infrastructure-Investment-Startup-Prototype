@@ -47,3 +47,10 @@ export async function adminGetFraudAlerts() {
 export async function adminGetProjectPreview(projectId: number) {
   return apiGet(`/admin/projects/${projectId}/preview`, adminToken());
 }
+
+export async function adminGetRevenue() {
+  return apiGet("/admin/revenue", adminToken());
+}
+
+export const getPlatformStats = () =>
+  apiGet("/admin/platform-stats", adminToken());

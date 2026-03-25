@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/ca
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { apiPost, apiGet } from "@/app/services/api";
+import { sendInvestmentEmail } from "@/utils/emailService";
+import { toast } from "sonner";
 
 /* ──────────────────── Brand Logo SVGs ──────────────────── */
 
@@ -131,6 +133,8 @@ export function InvestmentModal({ project, onClose, onSuccess }: InvestmentModal
 
   const [txHash, setTxHash] = useState<string>("0x7f9a...4b3c");
   const [tokensIssued, setTokensIssued] = useState<number>(0);
+  const [platformFee, setPlatformFee] = useState<number>(0);
+  const [totalPayable, setTotalPayable] = useState<number>(0);
 
   // Payment form states
   const [cardNumber, setCardNumber] = useState("");
@@ -171,6 +175,14 @@ export function InvestmentModal({ project, onClose, onSuccess }: InvestmentModal
     // compound interest (demo)
     return amt * Math.pow(1 + roi, years);
   }, [amount, safeROI, safeTenure]);
+
+  const calculatedPlatformFee = useMemo(() => {
+    return Number((Number(amount || 0) * 0.01).toFixed(2));
+  }, [amount]);
+
+  const calculatedTotalPayable = useMemo(() => {
+    return Number((Number(amount || 0) + calculatedPlatformFee).toFixed(2));
+  }, [amount, calculatedPlatformFee]);
 
   const backendProjectId = useMemo(() => {
     const raw = project?.id;
@@ -280,6 +292,28 @@ export function InvestmentModal({ project, onClose, onSuccess }: InvestmentModal
 
       setTxHash(res?.tx_hash || "0x7f9a...4b3c");
       setTokensIssued(Number(res?.tokens_minted ?? res?.tokens_issued ?? tokens));
+      setPlatformFee(Number(res?.platform_fee ?? calculatedPlatformFee));
+      setTotalPayable(Number(res?.total_amount ?? calculatedTotalPayable));
+
+      const storedUser = localStorage.getItem("user");
+      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+      const emailResult = await sendInvestmentEmail({
+        user_name: parsedUser?.name || "Investor",
+        project_name: project?.title || project?.name || "InfraBondX Project",
+        amount: Number(res?.amount_invested ?? investAmount),
+        tokens: Number(res?.tokens_minted ?? res?.tokens_issued ?? tokens),
+        roi: safeROI,
+        rewards: "Infra points and partner benefits",
+        to_email: parsedUser?.email || "investor@infrabondx.com",
+      });
+
+      if (emailResult.success) {
+        toast.success("📩 Investment email sent");
+      } else {
+        toast.error("Investment email failed", {
+          description: emailResult.error || "Please verify EmailJS template IDs",
+        });
+      }
 
       setStep("success");
     } catch {
@@ -423,6 +457,16 @@ export function InvestmentModal({ project, onClose, onSuccess }: InvestmentModal
                   </div>
 
                   <div className="flex justify-between">
+                    <span className="text-muted-foreground">Platform Fee (1%)</span>
+                    <span className="font-medium">₹{calculatedPlatformFee.toLocaleString("en-IN")}</span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Payable</span>
+                    <span className="font-semibold">₹{calculatedTotalPayable.toLocaleString("en-IN")}</span>
+                  </div>
+
+                  <div className="flex justify-between">
                     <span className="text-muted-foreground">Tokens</span>
                     <span className="font-medium">{tokens} InfraTokens</span>
                   </div>
@@ -464,9 +508,9 @@ export function InvestmentModal({ project, onClose, onSuccess }: InvestmentModal
                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                     <IndianRupee className="w-4 h-4 text-primary" />
                   </div>
-                  <span className="text-sm text-muted-foreground">Total Amount</span>
+                  <span className="text-sm text-muted-foreground">Total Payable (incl. fee)</span>
                 </div>
-                <span className="text-xl font-bold">₹{Number(amount).toLocaleString("en-IN")}</span>
+                <span className="text-xl font-bold">₹{calculatedTotalPayable.toLocaleString("en-IN")}</span>
               </div>
 
               {/* Payment Method Tabs */}
@@ -753,7 +797,7 @@ export function InvestmentModal({ project, onClose, onSuccess }: InvestmentModal
                   onClick={handleConfirm}
                   disabled={!isPaymentFormValid()}
                 >
-                  Pay ₹{Number(amount).toLocaleString("en-IN")}
+                  Pay ₹{calculatedTotalPayable.toLocaleString("en-IN")}
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
@@ -814,12 +858,35 @@ export function InvestmentModal({ project, onClose, onSuccess }: InvestmentModal
               <div>
                 <h4 className="text-xl font-bold mb-1">Payment Successful!</h4>
                 <p className="text-sm text-muted-foreground">
-                  ₹{Number(amount).toLocaleString("en-IN")} invested in{" "}
+                  ₹{Number(totalPayable || calculatedTotalPayable).toLocaleString("en-IN")} processed for{" "}
                   {project?.title || project?.name}
                 </p>
               </div>
 
               <div className="p-4 bg-accent rounded-lg space-y-2.5 text-left text-sm">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Investment Receipt</p>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Project</span>
+                  <span className="font-medium max-w-[60%] truncate text-right">{project?.title || project?.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Transaction ID</span>
+                  <span className="font-mono text-xs">
+                    {txHash?.length > 14 ? `${txHash.substring(0, 14)}...` : txHash}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Investment Amount</span>
+                  <span className="font-medium">₹{Number(amount).toLocaleString("en-IN")}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Platform Fee</span>
+                  <span className="font-medium">₹{Number(platformFee || calculatedPlatformFee).toLocaleString("en-IN")}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Paid</span>
+                  <span className="font-semibold">₹{Number(totalPayable || calculatedTotalPayable).toLocaleString("en-IN")}</span>
+                </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Payment Method</span>
                   <span className="font-medium capitalize">
@@ -834,10 +901,8 @@ export function InvestmentModal({ project, onClose, onSuccess }: InvestmentModal
                   </div>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Transaction Hash</span>
-                  <span className="font-mono text-xs">
-                    {txHash?.length > 14 ? `${txHash.substring(0, 10)}...` : txHash}
-                  </span>
+                  <span className="text-muted-foreground">ROI</span>
+                  <span className="font-medium text-[#10b981]">{safeROI}% p.a.</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status</span>

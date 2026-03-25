@@ -1,5 +1,5 @@
-import { ReactNode, useState, useRef, useEffect } from "react";
-import { LayoutDashboard, ShoppingBag, Wallet, History, TrendingUp, LogOut, User, Moon, Sun, ChevronDown, Settings, HelpCircle } from "lucide-react";
+import { ReactNode } from "react";
+import { LayoutDashboard, ShoppingBag, Wallet, History, TrendingUp, LogOut, User, Moon, Sun, Settings, HelpCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
@@ -25,23 +25,19 @@ const InfraBondXLogo = () => (
 export function InvestorLayout({ children, currentPage, onNavigate }: InvestorLayoutProps) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  const userInitials = (user?.name || "User")
+    .split(" ")
+    .map((part) => part.charAt(0))
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   const menuItems = [
     { id: "investor-dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { id: "marketplace", icon: ShoppingBag, label: "Marketplace" },
     { id: "portfolio", icon: Wallet, label: "Portfolio" },
+    { id: "withdraw", icon: Wallet, label: "Withdraw" },
     { id: "transactions", icon: History, label: "Transactions" },
     { id: "secondary-market", icon: TrendingUp, label: "Secondary Market" },
   ];
@@ -80,54 +76,25 @@ export function InvestorLayout({ children, currentPage, onNavigate }: InvestorLa
             {/* Notifications */}
             <NotificationDropdown role="investor" />
 
-            {/* Avatar Dropdown */}
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 hover:bg-accent rounded-lg transition-colors"
-              >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-sm font-semibold">
-                  {user?.name?.charAt(0) || "U"}
-                </div>
-                <div className="text-left hidden sm:block">
-                  <p className="text-sm font-medium text-foreground leading-tight">{user?.name}</p>
-                  <p className="text-[11px] text-muted-foreground leading-tight">{user?.email}</p>
-                </div>
-                <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", dropdownOpen && "rotate-180")} />
-              </button>
-
-              {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-xl shadow-lg dark:shadow-black/30 py-1 animate-fade-in-up z-50">
-                  <div className="px-4 py-3 border-b border-border">
-                    <p className="text-sm font-medium text-foreground">{user?.name}</p>
-                    <p className="text-xs text-muted-foreground">{user?.email}</p>
-                  </div>
-                  <button onClick={() => { onNavigate("profile"); setDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-accent transition-colors">
-                    <User className="w-4 h-4" /> Profile
-                  </button>
-                  <button onClick={() => { onNavigate("settings"); setDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-accent transition-colors">
-                    <Settings className="w-4 h-4" /> Settings
-                  </button>
-                  <button onClick={() => { onNavigate("help"); setDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-accent transition-colors">
-                    <HelpCircle className="w-4 h-4" /> Help & Support
-                  </button>
-                  <div className="border-t border-border my-1" />
-                  <button
-                    onClick={() => { logout(); onNavigate("landing"); setDropdownOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" /> Logout
-                  </button>
-                </div>
-              )}
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+              {userInitials}
             </div>
+
+            <button
+              onClick={() => { logout(); onNavigate("landing"); }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/70 text-sm text-muted-foreground hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all duration-200 hover:scale-[1.02]"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
           </div>
         </div>
       </nav>
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-64 sidebar-gradient border-r border-border/50 min-h-[calc(100vh-57px)] sticky top-[57px] flex flex-col">
+        <aside className="w-64 sidebar-gradient border-r border-border/50 min-h-[calc(100vh-57px)] sticky top-[57px] flex flex-col h-[calc(100vh-57px)]">
           <nav className="p-3 space-y-1 flex-1">
             {menuItems.map((item, idx) => (
               <button
@@ -146,15 +113,39 @@ export function InvestorLayout({ children, currentPage, onNavigate }: InvestorLa
               </button>
             ))}
           </nav>
-          
-          <div className="p-3 border-t border-border/50">
-            <button
-              onClick={() => { logout(); onNavigate("landing"); }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors text-left text-muted-foreground hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-600 dark:hover:text-red-400"
-            >
-              <LogOut className="w-5 h-5" />
-              <span className="text-sm font-medium">Logout</span>
-            </button>
+
+          <div className="mt-auto p-3 border-t border-border/50 bg-background/30">
+            <div className="flex items-center gap-2.5 px-2.5 py-2 mb-2 rounded-lg">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                {userInitials}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground leading-tight truncate">{user?.name || "Investor"}</p>
+                <p className="text-[11px] text-muted-foreground leading-tight truncate">{user?.email || "investor@infrabondx.com"}</p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 pb-2 mb-2 border-b border-border/50">
+              <button
+                onClick={() => onNavigate("profile")}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-white/70 dark:hover:bg-white/10 transition-all duration-200 hover:scale-[1.01]"
+              >
+                <User className="w-4 h-4" /> Profile
+              </button>
+              <button
+                onClick={() => onNavigate("settings")}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-white/70 dark:hover:bg-white/10 transition-all duration-200 hover:scale-[1.01]"
+              >
+                <Settings className="w-4 h-4" /> Settings
+              </button>
+              <button
+                onClick={() => onNavigate("help")}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-white/70 dark:hover:bg-white/10 transition-all duration-200 hover:scale-[1.01]"
+              >
+                <HelpCircle className="w-4 h-4" /> Help & Support
+              </button>
+            </div>
+
           </div>
         </aside>
 

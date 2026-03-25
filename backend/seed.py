@@ -1,5 +1,13 @@
+import random
+
 from models import db, User, Project, Milestone, Escrow, ProjectDocument, ProjectUpdate
 from werkzeug.security import generate_password_hash
+
+
+def _random_india_coordinates():
+    lat = round(random.uniform(8.0, 37.5), 6)
+    lng = round(random.uniform(68.0, 97.5), 6)
+    return lat, lng
 
 
 def seed_data():
@@ -242,6 +250,10 @@ def seed_data():
             status="PENDING",
         ),
     ]
+
+    for p in projects:
+        if p.latitude is None or p.longitude is None:
+            p.latitude, p.longitude = _random_india_coordinates()
 
     db.session.add_all(projects)
     db.session.commit()

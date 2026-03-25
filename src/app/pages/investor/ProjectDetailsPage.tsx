@@ -15,11 +15,21 @@ import { MilestoneStepper } from "@/app/components/MilestoneStepper";
 import { EscrowVisualization } from "@/app/components/EscrowVisualization";
 import { ROICalculator } from "@/app/components/ROICalculator";
 import { InvestmentModal } from "@/app/components/InvestmentModal";
-import { MapView } from "@/app/components/MapView";
+import RealMap from "@/app/components/RealMap";
 import { ProjectUpdatesSection } from "@/app/components/ProjectUpdatesSection";
 import { RewardBenefitsCard } from "@/app/components/RewardBenefitsCard";
 import { DocumentCard } from "@/app/components/DocumentCard";
 import { apiGet } from "@/app/services/api";
+import { formatDateTime } from "@/utils/dateFormatter";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 interface ProjectDetailsPageProps {
   projectId: string;
@@ -70,6 +80,9 @@ export function ProjectDetailsPage({ projectId, onNavigate }: ProjectDetailsPage
     released: 0,
   });
   const [documents, setDocuments] = useState<DocumentDTO[]>([]);
+  const [tokenValue, setTokenValue] = useState({ base_price: 0, current_value: 0 });
+  const [projectRewards, setProjectRewards] = useState<any[]>([]);
+  const [totalRewardPoints, setTotalRewardPoints] = useState(0);
 
   const pid = Number(projectId.replace("project-", ""));
 
@@ -89,11 +102,29 @@ export function ProjectDetailsPage({ projectId, onNavigate }: ProjectDetailsPage
 
       const docsData = await apiGet(`/projects/${pid}/documents`);
       setDocuments(Array.isArray(docsData) ? docsData : []);
+
+      const tvData = await apiGet(`/projects/${pid}/token-value`);
+      setTokenValue({
+        base_price: Number(tvData?.base_price || 0),
+        current_value: Number(tvData?.current_value || 0),
+      });
+
+      const token = localStorage.getItem("token") || "";
+      if (token) {
+        const rewardsData = await apiGet("/investor/rewards", token);
+        const allRewards = Array.isArray(rewardsData?.rewards) ? rewardsData.rewards : [];
+        const onlyProjectRewards = allRewards.filter((r: any) => Number(r.project_id) === pid);
+        setProjectRewards(onlyProjectRewards);
+        setTotalRewardPoints(Number(rewardsData?.total_points || 0));
+      }
     } catch {
       setProject(null);
       setMilestones([]);
       setEscrow({ locked: 0, released: 0 });
       setDocuments([]);
+      setTokenValue({ base_price: 0, current_value: 0 });
+      setProjectRewards([]);
+      setTotalRewardPoints(0);
     }
   };
 
@@ -119,7 +150,13 @@ export function ProjectDetailsPage({ projectId, onNavigate }: ProjectDetailsPage
   const totalEscrow = escrow.locked + escrow.released;
   const releasedEscrow = escrow.released;
   const lockedEscrow = escrow.locked;
-
+  const remainingEscrow = Math.max(0, Number(project.funding_raised || 0) - releasedEscrow);
+  const riskBadge =
+    Number(project.risk_score || 0) <= 33
+      ? { label: "Low", className: "bg-emerald-100 text-emerald-700" }
+      : Number(project.risk_score || 0) <= 66
+      ? { label: "Medium", className: "bg-amber-100 text-amber-700" }
+      : { label: "High", className: "bg-red-100 text-red-700" };
   const uiProject = {
     id: String(project.id),
     name: project.title,
@@ -128,7 +165,7 @@ export function ProjectDetailsPage({ projectId, onNavigate }: ProjectDetailsPage
     description: project.description,
     latitude: project.latitude,
     longitude: project.longitude,
-    issuerName: "Verified PPP/Gov Issuer",
+    issuerName: "Verified PPP/Gov Project Developer",
     issuerVerified: true,
     fundingRaised: project.funding_raised,
     fundingTarget: project.funding_target,
@@ -144,6 +181,11 @@ export function ProjectDetailsPage({ projectId, onNavigate }: ProjectDetailsPage
       escrowRelease: m.escrow_release_percent,
     })),
   };
+
+  const tokenValueChartData = [
+    { name: "Initial", value: Number(tokenValue.base_price || uiProject.tokenPrice) },
+    { name: "Current", value: Number(tokenValue.current_value || uiProject.tokenPrice) },
+  ];
 
   return (
     <div className="space-y-6">
@@ -163,6 +205,14 @@ export function ProjectDetailsPage({ projectId, onNavigate }: ProjectDetailsPage
               </div>
               <span>•</span>
               <span>{uiProject.category}</span>
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                Live Investment Opportunity
+              </span>
+              {fundingProgress >= 70 && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                  High Demand Project
+                </span>
+              )}
             </div>
           </div>
           <Button size="lg" onClick={() => setShowInvestModal(true)}>
@@ -195,7 +245,7 @@ export function ProjectDetailsPage({ projectId, onNavigate }: ProjectDetailsPage
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-[#8b5cf6]">{fundingProgress.toFixed(0)}%</p>
-            <p className="text-xs text-muted-foreground">Funded</p>
+            <p className="text-xs text-muted-foreground">Invested</p>
           </CardContent>
         </Card>
         <Card>
@@ -221,7 +271,7 @@ export function ProjectDetailsPage({ projectId, onNavigate }: ProjectDetailsPage
 
               <div className="grid md:grid-cols-2 gap-4 pt-4 border-t">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Issuer</p>
+                  <p className="text-sm text-muted-foreground mb-1">Project Developer</p>
                   <div className="flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-muted-foreground" />
                     <span className="font-medium">{uiProject.issuerName}</span>
@@ -240,10 +290,10 @@ export function ProjectDetailsPage({ projectId, onNavigate }: ProjectDetailsPage
               </div>
 
               {/* Funding Progress */}
-              <div className="pt-4">
+              <div className="pt-4 rounded-xl border p-4 bg-primary/5">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Funding Progress</span>
-                  <span className="font-medium">{fundingProgress.toFixed(1)}%</span>
+                  <span className="text-sm font-semibold text-foreground">Funding Progress</span>
+                  <span className="font-semibold">{fundingProgress.toFixed(1)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3">
                   <div
@@ -251,24 +301,58 @@ export function ProjectDetailsPage({ projectId, onNavigate }: ProjectDetailsPage
                     style={{ width: `${Math.min(100, fundingProgress)}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-between mt-2 text-sm">
-                  <span className="text-muted-foreground">
-                    ₹{uiProject.fundingRaised.toLocaleString("en-IN")} raised
-                  </span>
-                  <span className="font-medium">
-                    ₹{uiProject.fundingTarget.toLocaleString("en-IN")} target
-                  </span>
+                <div className="mt-3 text-sm font-medium">
+                  ₹{uiProject.fundingRaised.toLocaleString("en-IN")} raised out of ₹{uiProject.fundingTarget.toLocaleString("en-IN")}
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Map Location Placeholder */}
-          <MapView 
-            latitude={uiProject.latitude} 
-            longitude={uiProject.longitude} 
-            locationName={uiProject.location} 
-          />
+          <Card>
+            <CardHeader>
+              <CardTitle>Token Value Trend</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={tokenValueChartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip formatter={(value: number) => `₹${Number(value).toFixed(2)}`} />
+                    <Line type="monotone" dataKey="value" stroke="#0ea5e9" strokeWidth={3} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mt-4 text-sm">
+                <div className="rounded-lg border p-3">
+                  <p className="text-muted-foreground">Initial Price</p>
+                  <p className="font-semibold">₹{Number(tokenValue.base_price || uiProject.tokenPrice).toFixed(2)}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-muted-foreground">Current Price</p>
+                  <p className="font-semibold text-[#10b981]">₹{Number(tokenValue.current_value || uiProject.tokenPrice).toFixed(2)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Project Location */}
+          <Card>
+            <CardHeader>
+              <CardTitle>📍 Project Location</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Lat: {(uiProject.latitude ?? 20.5937).toFixed(4)} | Lng: {(uiProject.longitude ?? 78.9629).toFixed(4)}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <RealMap
+                lat={uiProject.latitude || 20.5937}
+                lng={uiProject.longitude || 78.9629}
+                title={uiProject.name}
+              />
+            </CardContent>
+          </Card>
 
           {/* Milestones */}
           <Card>
@@ -286,6 +370,42 @@ export function ProjectDetailsPage({ projectId, onNavigate }: ProjectDetailsPage
             lockedFunds={lockedEscrow}
             releasedFunds={releasedEscrow}
           />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Escrow Transparency</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid md:grid-cols-3 gap-3">
+                <div className="rounded-lg border p-3 bg-blue-50/60">
+                  <p className="text-xs text-muted-foreground">Locked Funds</p>
+                  <p className="text-lg font-semibold">₹{lockedEscrow.toLocaleString("en-IN")}</p>
+                </div>
+                <div className="rounded-lg border p-3 bg-emerald-50/60">
+                  <p className="text-xs text-muted-foreground">Released Funds</p>
+                  <p className="text-lg font-semibold">₹{releasedEscrow.toLocaleString("en-IN")}</p>
+                </div>
+                <div className="rounded-lg border p-3 bg-amber-50/60">
+                  <p className="text-xs text-muted-foreground">Remaining Funds</p>
+                  <p className="text-lg font-semibold">₹{remainingEscrow.toLocaleString("en-IN")}</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Released</p>
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-2 bg-emerald-500" style={{ width: `${totalEscrow > 0 ? (releasedEscrow / totalEscrow) * 100 : 0}%` }} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Locked</p>
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-2 bg-blue-500" style={{ width: `${totalEscrow > 0 ? (lockedEscrow / totalEscrow) * 100 : 0}%` }} />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Documents */}
           <Card>
@@ -320,6 +440,15 @@ export function ProjectDetailsPage({ projectId, onNavigate }: ProjectDetailsPage
               <CardTitle>Risk Assessment</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Risk Score</p>
+                  <p className="text-lg font-semibold">{uiProject.riskScore}/100</p>
+                </div>
+                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${riskBadge.className}`}>
+                  {riskBadge.label} Risk
+                </span>
+              </div>
               <RiskScoreMeter score={uiProject.riskScore} />
               <div className="pt-4 border-t space-y-2 text-sm">
                 <p className="text-muted-foreground">
@@ -340,6 +469,32 @@ export function ProjectDetailsPage({ projectId, onNavigate }: ProjectDetailsPage
             category={uiProject.category}
             projectName={uiProject.name}
           />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>My Rewards on This Project</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="rounded-lg border p-3 bg-primary/5">
+                <p className="text-xs text-muted-foreground">Total Reward Points</p>
+                <p className="text-xl font-bold">{totalRewardPoints.toLocaleString("en-IN")}</p>
+              </div>
+              {projectRewards.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No rewards unlocked yet for this investment opportunity.</p>
+              ) : (
+                projectRewards.slice(0, 3).map((reward) => (
+                  <div key={reward.id} className="rounded-lg border p-3">
+                    <p className="text-sm font-medium">{reward.reward_type?.replace(/_/g, " ") || "Benefit"}</p>
+                    <p className="text-xs text-muted-foreground">{reward.description || "Reward benefit unlocked"}</p>
+                    <p className="text-xs font-semibold text-[#10b981] mt-1">+{reward.reward_points || 0} points</p>
+                    {reward.granted_at && (
+                      <p className="text-[11px] text-muted-foreground mt-1">Granted: {formatDateTime(reward.granted_at)}</p>
+                    )}
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
 
           {/* ROI Calculator */}
           <ROICalculator

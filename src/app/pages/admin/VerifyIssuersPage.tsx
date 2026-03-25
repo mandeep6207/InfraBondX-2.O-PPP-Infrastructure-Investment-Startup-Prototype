@@ -3,6 +3,7 @@ import { Shield, BadgeCheck, Building2, Wallet, Calendar, Briefcase, Loader, Bar
 import { Card, CardContent } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { apiGet } from "@/app/services/api";
+import { formatDateTime } from "@/utils/dateFormatter";
 
 interface VerifyIssuersPageProps {
   onNavigate: (page: string) => void;
@@ -142,9 +143,7 @@ export function VerifyIssuersPage({ onNavigate }: VerifyIssuersPageProps) {
                       <span className="text-[10px] text-muted-foreground">Joined</span>
                     </div>
                     <p className="text-sm font-bold">
-                      {issuer.created_at
-                        ? new Date(issuer.created_at).toLocaleDateString("en-IN", { month: "short", year: "numeric" })
-                        : "—"}
+                      {issuer.created_at ? formatDateTime(issuer.created_at) : "—"}
                     </p>
                   </div>
                 </div>

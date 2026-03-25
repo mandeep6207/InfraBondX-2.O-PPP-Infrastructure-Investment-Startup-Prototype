@@ -1,9 +1,11 @@
 import { Moon, Sun, Bell, Shield, Globe } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useState } from "react";
 
 export function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
+  const [emailNotifications, setEmailNotifications] = useState(true);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -28,12 +30,12 @@ export function SettingsPage() {
             </div>
             <button
               onClick={toggleTheme}
-              className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${
+              className={`relative inline-flex h-7 w-14 items-center rounded-full transition-all duration-200 ${
                 theme === "dark" ? "bg-sky-600" : "bg-gray-300"
               }`}
             >
               <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-all duration-200 ${
                   theme === "dark" ? "translate-x-8" : "translate-x-1"
                 }`}
               />
@@ -64,13 +66,32 @@ export function SettingsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="flex items-center justify-between p-3 border rounded-xl hover:bg-accent/30 transition-colors">
+            <div>
+              <p className="text-sm font-medium">Email Notifications</p>
+              <p className="text-xs text-muted-foreground">Receive updates and alerts via email</p>
+            </div>
+            <button
+              onClick={() => setEmailNotifications((prev) => !prev)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                emailNotifications ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  emailNotifications ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+
           {[
             { label: "Investment Updates", desc: "When your investments receive updates", enabled: true },
             { label: "Milestone Alerts", desc: "When project milestones are completed", enabled: true },
             { label: "Escrow Releases", desc: "When escrow funds are released", enabled: true },
             { label: "Marketing & Promotions", desc: "New projects and platform features", enabled: false },
           ].map((item) => (
-            <div key={item.label} className="flex items-center justify-between p-3 border rounded-xl">
+            <div key={item.label} className="flex items-center justify-between p-3 border rounded-xl hover:bg-accent/30 transition-colors">
               <div>
                 <p className="text-sm font-medium">{item.label}</p>
                 <p className="text-xs text-muted-foreground">{item.desc}</p>
@@ -99,6 +120,22 @@ export function SettingsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="flex items-center justify-between p-3 border rounded-xl hover:bg-accent/30 transition-colors">
+            <div>
+              <p className="text-sm font-medium">Change Password</p>
+              <p className="text-xs text-muted-foreground">Update your account password regularly</p>
+            </div>
+            <button className="px-3 py-1.5 border rounded-lg text-sm text-muted-foreground hover:bg-accent transition-colors cursor-default">
+              Change Password
+            </button>
+          </div>
+          <div className="flex items-center justify-between p-3 border rounded-xl hover:bg-accent/30 transition-colors">
+            <div>
+              <p className="text-sm font-medium">Enable 2FA</p>
+              <p className="text-xs text-muted-foreground">Coming Soon</p>
+            </div>
+            <span className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-muted text-muted-foreground">Coming Soon</span>
+          </div>
           <div className="flex items-center justify-between p-3 border rounded-xl">
             <div>
               <p className="text-sm font-medium">Session Timeout</p>

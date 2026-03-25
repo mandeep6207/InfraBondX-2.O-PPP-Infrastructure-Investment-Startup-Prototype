@@ -6,6 +6,7 @@ import { Input } from "@/app/components/ui/input";
 import { DocumentCard } from "@/app/components/DocumentCard";
 import { ProjectUpdatesSection } from "@/app/components/ProjectUpdatesSection";
 import { EscrowTransactionModal } from "@/app/components/EscrowTransactionModal";
+import RealMap from "@/app/components/RealMap";
 import { apiGet } from "@/app/services/api";
 
 interface AdminProjectPreviewPageProps {
@@ -200,6 +201,22 @@ export function AdminProjectPreviewPage({ projectId, onNavigate }: AdminProjectP
           <p className="text-2xl font-bold text-primary">₹{project.funding_target.toLocaleString("en-IN")}</p>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>📍 Project Location</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Lat: {(project.latitude ?? 20.5937).toFixed(4)} | Lng: {(project.longitude ?? 78.9629).toFixed(4)}
+          </p>
+        </CardHeader>
+        <CardContent>
+          <RealMap
+            lat={project.latitude || 20.5937}
+            lng={project.longitude || 78.9629}
+            title={project.title}
+          />
+        </CardContent>
+      </Card>
 
       <div className="grid md:grid-cols-2 gap-6">
         <Card>

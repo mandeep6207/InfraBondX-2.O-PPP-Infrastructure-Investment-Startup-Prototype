@@ -1,10 +1,18 @@
-import { User, Mail, Shield, Building2, Calendar, Edit2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { User, Mail, Shield, Building2, Calendar, Edit2, BadgeCheck, Briefcase, Wallet, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiGet } from "@/app/services/api";
+import { formatDateTime } from "@/utils/dateFormatter";
 
 export function ProfilePage() {
   const { user } = useAuth();
+  const [stats, setStats] = useState({
+    totalInvestments: 0,
+    totalRewardPoints: 0,
+    activeProjects: 0,
+  });
 
   const roleColors: Record<string, string> = {
     investor: "bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300",
@@ -19,6 +27,63 @@ export function ProfilePage() {
   };
 
   const role = user?.role || "investor";
+
+  useEffect(() => {
+    const loadStats = async () => {
+      const token = localStorage.getItem("token") || "";
+      if (!token) return;
+
+      if (role === "investor") {
+        const [portfolioRes, rewardsRes] = await Promise.all([
+          apiGet("/investor/portfolio", token),
+          apiGet("/investor/rewards", token),
+        ]);
+
+        const portfolio = Array.isArray(portfolioRes) ? portfolioRes : [];
+        const totalInvestments = portfolio.reduce((sum, item) => {
+          return sum + Number(item.tokens || 0) * Number(item.token_price || 0);
+        }, 0);
+
+        setStats({
+          totalInvestments,
+          totalRewardPoints: Number(rewardsRes?.total_points || 0),
+          activeProjects: portfolio.length,
+        });
+        return;
+      }
+
+      if (role === "issuer") {
+        const projectsRes = await apiGet("/issuer/projects", token);
+        const projects = Array.isArray(projectsRes) ? projectsRes : [];
+
+        setStats({
+          totalInvestments: projects.reduce((sum, p) => sum + Number(p.funding_raised || 0), 0),
+          totalRewardPoints: 0,
+          activeProjects: projects.filter((p) => String(p.status || "").toUpperCase() === "ACTIVE").length,
+        });
+        return;
+      }
+
+      const [projectsRes, revenueRes] = await Promise.all([
+        apiGet("/admin/projects", token),
+        apiGet("/admin/revenue", token),
+      ]);
+      const projects = Array.isArray(projectsRes) ? projectsRes : [];
+      setStats({
+        totalInvestments: Number(revenueRes?.total_investments || 0),
+        totalRewardPoints: 0,
+        activeProjects: projects.filter((p) => String(p.status || "").toUpperCase() === "ACTIVE").length,
+      });
+    };
+
+    loadStats();
+  }, [role]);
+
+  const roleLabel = useMemo(() => {
+    if (role === "issuer") return "Developer";
+    if (role === "admin") return "Platform";
+    return "Investor";
+  }, [role]);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -41,8 +106,11 @@ export function ProfilePage() {
                 <div>
                   <h2 className="text-xl font-bold">{user?.name || "User"}</h2>
                   <span className={`inline-block text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full mt-1 ${roleColors[role]}`}>
-                    {role}
+                    {roleLabel}
                   </span>
+                  <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                    <BadgeCheck className="w-3.5 h-3.5" /> Verified User
+                  </div>
                 </div>
                 <Button variant="outline" size="sm" className="gap-1.5" disabled>
                   <Edit2 className="w-3.5 h-3.5" />
@@ -67,7 +135,7 @@ export function ProfilePage() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Role</p>
-                    <p className="text-sm font-medium capitalize">{role}</p>
+                    <p className="text-sm font-medium">{roleLabel}</p>
                   </div>
                 </div>
 
@@ -89,10 +157,41 @@ export function ProfilePage() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Account Created</p>
-                    <p className="text-sm font-medium">{new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</p>
+                    <p className="text-sm font-medium">{formatDateTime(new Date())}</p>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Account Stats</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-3 gap-3">
+            <div className="p-4 rounded-xl border bg-primary/5 hover:bg-primary/10 transition-colors">
+              <div className="flex items-center gap-2 mb-1">
+                <Wallet className="w-4 h-4 text-primary" />
+                <p className="text-xs text-muted-foreground">Total Investments</p>
+              </div>
+              <p className="text-xl font-bold">₹{stats.totalInvestments.toLocaleString("en-IN")}</p>
+            </div>
+            <div className="p-4 rounded-xl border bg-amber-50/60 dark:bg-amber-950/20 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 transition-colors">
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles className="w-4 h-4 text-amber-600" />
+                <p className="text-xs text-muted-foreground">Total Rewards Points</p>
+              </div>
+              <p className="text-xl font-bold">{stats.totalRewardPoints.toLocaleString("en-IN")}</p>
+            </div>
+            <div className="p-4 rounded-xl border bg-emerald-50/60 dark:bg-emerald-950/20 hover:bg-emerald-100/60 dark:hover:bg-emerald-900/30 transition-colors">
+              <div className="flex items-center gap-2 mb-1">
+                <Briefcase className="w-4 h-4 text-emerald-600" />
+                <p className="text-xs text-muted-foreground">Active Projects</p>
+              </div>
+              <p className="text-xl font-bold">{stats.activeProjects.toLocaleString("en-IN")}</p>
             </div>
           </div>
         </CardContent>

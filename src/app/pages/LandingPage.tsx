@@ -32,13 +32,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
-import { DisclaimerBanner } from "@/app/components/DisclaimerBanner";
 
 /* ═══════════════════════════════════════════════════════════════════
    INLINE SVG COMPONENTS
    ═══════════════════════════════════════════════════════════════════ */
 
-function InfraBondXLogo({ size = 40 }: { size?: number }) {
+function InfraBondXLogo({ size = 50 }: { size?: number }) {
   return (
     <svg
       width={size}
@@ -130,7 +129,7 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
       className={className}
       style={{
         opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(32px)",
+        transform: visible ? "translateY(0) scale(1)" : "translateY(28px) scale(0.97)",
         transition: `opacity 0.7s ease ${delay}s, transform 0.7s ease ${delay}s`,
       }}
     >
@@ -148,32 +147,62 @@ interface LandingPageProps {
 }
 
 export function LandingPage({ onNavigate }: LandingPageProps) {
+  const [isPageReady, setIsPageReady] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+  const [heroTextVisible, setHeroTextVisible] = useState(false);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setIsPageReady(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    let rafId = 0;
+    const onScroll = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        const y = window.scrollY;
+        setIsScrolled(y > 8);
+        setScrollY(y);
+        rafId = 0;
+      });
+    };
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, []);
+
   /* ── Hero carousel slides ──────────────────────────────────────── */
   const heroSlides = [
     {
-      img: "https://images.unsplash.com/photo-1545558014-8692077e9b5c?auto=format&fit=crop&w=1920&q=80",
-      title: "Invest in Highway Development",
-      sub: "National Highway Infrastructure Program — 12,000 km upgrades across India",
+      img: "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh78H6hm3Guutgr55uvXMCPMVYFGqU0LPB7PcjZrp7BfHmT1u_vXXDYrP3h3wB_ETFNPwGILcZ_clycioCSJf9q8qoG1Pspv1ieDJ81IK-CaaD_O4FXhwakAqodwazse_WH4d0dslSNFJIt/w640-h360/55576-infrastructure-bridge-dna.jpg",
+      title: "Invest in India's Highways",
+      sub: "Support expansion of strategic highway corridors connecting growth centers across India.",
     },
     {
-      img: "https://images.unsplash.com/photo-1513002749550-c59d786b8e6c?auto=format&fit=crop&w=1920&q=80",
-      title: "Support Metro Expansion",
-      sub: "Rapid metro transit networks for 25 tier-1 & tier-2 cities",
+      img: "https://t4.ftcdn.net/jpg/10/24/64/71/240_F_1024647142_ir46cbPjvRaFZBXiVPfmsQvLMRCViqmw.jpg",
+      title: "Back Delhi Metro Expansion",
+      sub: "Enable faster, cleaner urban mobility with milestone-based funding for metro networks.",
     },
     {
       img: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1920&q=80",
       title: "Build Smart Cities Together",
-      sub: "Urban infrastructure modernization across 100 smart cities",
+      sub: "Fund digital-first civic systems for water, mobility, safety, and energy in new smart districts.",
     },
     {
-      img: "https://images.unsplash.com/photo-1509390144018-eeaf65052242?auto=format&fit=crop&w=1920&q=80",
-      title: "Power India's Renewable Future",
-      sub: "Green energy installations — 50 GW rooftop solar target",
+      img: "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1920&q=80",
+      title: "Power India's Solar Future",
+      sub: "Accelerate utility-scale and distributed solar infrastructure through transparent public investing.",
     },
     {
-      img: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1920&q=80",
-      title: "Bridge the Infrastructure Gap",
-      sub: "Critical bridge construction & rehabilitation program nationwide",
+      img: "https://images.unsplash.com/photo-1565891741441-64926e441838?auto=format&fit=crop&w=1920&q=80",
+      title: "Scale Mumbai Coastal Connectivity",
+      sub: "Participate in resilient coastal road and bridge networks that reduce congestion and fuel growth.",
     },
   ];
   const [heroIdx, setHeroIdx] = useState(0);
@@ -181,6 +210,12 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
     const t = setInterval(() => setHeroIdx((i) => (i + 1) % heroSlides.length), 5000);
     return () => clearInterval(t);
   }, []);
+
+  useEffect(() => {
+    setHeroTextVisible(false);
+    const t = window.setTimeout(() => setHeroTextVisible(true), 90);
+    return () => window.clearTimeout(t);
+  }, [heroIdx]);
 
   /* ── Ticker data ───────────────────────────────────────────────── */
   const tickerItems = [
@@ -195,32 +230,61 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
-      <DisclaimerBanner />
-
+    <div
+      className="min-h-screen bg-white"
+      style={{
+        opacity: isPageReady ? 1 : 0,
+        transform: isPageReady ? "scale(1)" : "scale(0.985)",
+        transition: "opacity 0.55s ease, transform 0.55s ease",
+      }}
+    >
       {/* ═══ SECTION 0 — NAVBAR ═══════════════════════════════════ */}
-      <nav className="border-b bg-white/95 backdrop-blur sticky top-0 z-50 shadow-sm">
+      <nav className={`border-b sticky top-0 z-50 transition-all duration-300 ${
+        isScrolled
+          ? "bg-white/90 backdrop-blur-xl shadow-[0_10px_35px_rgba(15,23,42,0.12)] border-slate-200/70"
+          : "bg-white/85 backdrop-blur-md shadow-sm border-slate-200/60"
+      }`}>
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <InfraBondXLogo size={42} />
             <InfraBondXTextLogo height={26} />
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-            <button className="hover:text-primary transition-colors">How It Works</button>
-            <button className="hover:text-primary transition-colors">Projects</button>
-            <button className="hover:text-primary transition-colors">Impact</button>
-            <button className="hover:text-primary transition-colors">Trust</button>
+            <button
+              className="hover:text-primary transition-colors"
+              onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              How It Works
+            </button>
+            <button
+              className="hover:text-primary transition-colors"
+              onClick={() => document.getElementById("projects")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              Projects
+            </button>
+            <button
+              className="hover:text-primary transition-colors"
+              onClick={() => document.getElementById("impact")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              Impact
+            </button>
+            <button
+              className="hover:text-primary transition-colors"
+              onClick={() => document.getElementById("trust")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              Trust
+            </button>
           </div>
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
-              className="text-primary font-medium"
+              className="text-primary font-medium transition-all duration-300 hover:scale-[1.03] hover:shadow-md"
               onClick={() => onNavigate("role-select")}
             >
               Sign In
             </Button>
             <Button
-              className="bg-primary hover:bg-primary/90 shadow-md"
+              className="bg-primary hover:bg-primary/90 shadow-md transition-all duration-300 hover:scale-[1.03] hover:shadow-lg"
               onClick={() => onNavigate("role-select")}
             >
               Get Started <ArrowRight className="w-4 h-4 ml-1" />
@@ -230,22 +294,24 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </nav>
 
       {/* ═══ SECTION 1 — HERO CAROUSEL BANNER ═══════════════════ */}
-      <section className="relative h-[60vh] min-h-[420px] max-h-[600px] flex items-center overflow-hidden">
+      <section className="relative h-[66vh] min-h-[460px] max-h-[720px] flex items-center overflow-hidden">
         {/* Carousel background images */}
         {heroSlides.map((slide, i) => (
           <div
             key={i}
-            className="absolute inset-0 bg-cover bg-center transition-opacity duration-[1200ms] ease-in-out"
+            className="absolute inset-0 bg-cover bg-center transition-[opacity,transform] duration-[1200ms] ease-in-out will-change-transform"
             style={{
               backgroundImage: `url('${slide.img}')`,
               opacity: i === heroIdx ? 1 : 0,
+              transform: i === heroIdx ? `scale(1.05) translateY(${Math.min(scrollY * 0.12, 44)}px)` : "scale(1)",
             }}
           />
         ))}
         {/* Dark overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0c4a6e]/95 via-[#0c4a6e]/80 to-[#0c4a6e]/50" />
+        <div className="absolute inset-0 bg-[linear-gradient(110deg,rgba(2,6,23,0.88)_8%,rgba(12,74,110,0.78)_45%,rgba(15,23,42,0.56)_100%)]" />
         {/* Subtle grid pattern */}
-        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
+        <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)", backgroundSize: "52px 52px" }} />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(16,185,129,0.16),transparent_42%)]" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 w-full">
           <div className="max-w-3xl">
@@ -256,18 +322,39 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
             </div>
 
             {/* Animated headline from current slide */}
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-[1.1] mb-4 tracking-tight transition-all duration-700">
+            <h1
+              className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-[1.05] mb-4 tracking-tight"
+              style={{
+                opacity: heroTextVisible ? 1 : 0,
+                transform: heroTextVisible ? "translateY(0)" : "translateY(18px)",
+                transition: "opacity 0.65s ease, transform 0.65s ease",
+              }}
+            >
               {heroSlides[heroIdx].title}
             </h1>
-            <p className="text-base md:text-lg text-white/80 leading-relaxed mb-8 max-w-2xl transition-all duration-700">
+            <p
+              className="text-base md:text-lg text-white/80 leading-relaxed mb-8 max-w-2xl"
+              style={{
+                opacity: heroTextVisible ? 1 : 0,
+                transform: heroTextVisible ? "translateY(0)" : "translateY(12px)",
+                transition: "opacity 0.6s ease 0.12s, transform 0.6s ease 0.12s",
+              }}
+            >
               {heroSlides[heroIdx].sub}
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-wrap items-center gap-4 mb-8">
+            <div
+              className="flex flex-wrap items-center gap-4 mb-8"
+              style={{
+                opacity: heroTextVisible ? 1 : 0,
+                transform: heroTextVisible ? "scale(1)" : "scale(0.92)",
+                transition: "opacity 0.5s ease 0.2s, transform 0.5s ease 0.2s",
+              }}
+            >
               <Button
                 size="lg"
-                className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/25 text-base px-7 py-5 h-auto"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/25 text-base px-7 py-5 h-auto transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_16px_35px_rgba(16,185,129,0.45)]"
                 onClick={() => onNavigate("role-select")}
               >
                 Explore Projects <ArrowRight className="w-5 h-5 ml-2" />
@@ -275,7 +362,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               <Button
                 size="lg"
                 variant="outline"
-                className="bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20 text-base px-7 py-5 h-auto"
+                className="bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20 text-base px-7 py-5 h-auto transition-all duration-300 hover:scale-[1.03] hover:shadow-lg"
                 onClick={() => onNavigate("role-select")}
               >
                 Become an Issuer <ExternalLink className="w-4 h-4 ml-2" />
@@ -358,7 +445,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </div>
 
       {/* ═══ SECTION 4 — GOV UPDATES + PROJECT CATEGORIES ════════ */}
-      <section className="py-16 px-6 bg-slate-50">
+      <section id="projects" className="relative py-20 px-6 bg-gradient-to-b from-slate-50 to-slate-100/60">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-300/60 to-transparent" />
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-8">
           {/* LEFT — Live Infrastructure Updates */}
           <FadeIn>
@@ -387,7 +475,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
                   { text: "Renewable energy fund shows 14.2% projected ROI", time: "1 day ago", icon: Sun, color: "text-amber-600 bg-amber-50" },
                   { text: "Chennai smart water project escrow release approved", time: "2 days ago", icon: Cpu, color: "text-violet-600 bg-violet-50" },
                 ].map((update, i) => (
-                  <div key={i} className="flex items-start gap-3 px-6 py-3.5 hover:bg-slate-50/80 transition-colors cursor-pointer group">
+                  <div key={i} className="flex items-start gap-3 px-6 py-3.5 hover:bg-slate-50/80 transition-all duration-300 cursor-pointer group hover:-translate-y-0.5 hover:shadow-sm">
                     <div className={`w-8 h-8 rounded-lg ${update.color} flex items-center justify-center shrink-0 mt-0.5`}>
                       <update.icon className="w-4 h-4" />
                     </div>
@@ -418,7 +506,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
                   { icon: Building2, title: "Urban Infra", desc: "Bridges & flyovers", color: "from-rose-500 to-pink-600", bg: "bg-rose-50", iconColor: "text-rose-600" },
                   { icon: Globe, title: "Water & Sanitation", desc: "Clean water access", color: "from-cyan-500 to-teal-600", bg: "bg-cyan-50", iconColor: "text-cyan-600" },
                 ].map((cat, i) => (
-                  <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer group">
+                  <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-xl hover:-translate-y-1.5 hover:scale-[1.02] transition-all duration-300 cursor-pointer group">
                     <div className={`w-11 h-11 rounded-xl ${cat.bg} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
                       <cat.icon className={`w-5 h-5 ${cat.iconColor}`} />
                     </div>
@@ -433,7 +521,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </section>
 
       {/* ═══ SECTION 5 — PLATFORM STATISTICS ═════════════════════ */}
-      <section className="py-20 px-6 bg-white">
+      <section className="relative py-24 px-6 bg-white">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-200/80 to-transparent" />
         <div className="max-w-7xl mx-auto">
           <FadeIn>
             <div className="text-center mb-14">
@@ -451,7 +540,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               { icon: Users, value: "12,000+", label: "Retail Investors", color: "from-violet-500 to-purple-600" },
             ].map((s, i) => (
               <FadeIn key={i} delay={i * 0.1}>
-                <div className="relative bg-white rounded-2xl border border-slate-100 shadow-lg hover:shadow-xl transition-shadow p-6 text-center group overflow-hidden">
+                <div className="relative bg-white rounded-2xl border border-slate-100 shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1.5 hover:scale-[1.02] p-6 text-center group overflow-hidden">
                   {/* Gradient top accent */}
                   <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${s.color}`} />
                   <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${s.color} flex items-center justify-center mx-auto mb-4 shadow-md group-hover:scale-105 transition-transform`}>
@@ -467,7 +556,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </section>
 
       {/* ═══ SECTION 6 — HOW IT WORKS ════════════════════════════ */}
-      <section className="py-20 px-6 bg-slate-50">
+      <section id="how-it-works" className="relative py-24 px-6 bg-gradient-to-b from-slate-50 to-slate-100/70">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-300/70 to-transparent" />
         <div className="max-w-7xl mx-auto">
           <FadeIn>
             <div className="text-center mb-16">
@@ -513,7 +603,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </section>
 
       {/* ═══ SECTION 7 — TRUST & GOVERNANCE ══════════════════════ */}
-      <section className="py-20 px-6 bg-white">
+      <section id="trust" className="relative py-24 px-6 bg-white">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-200/80 to-transparent" />
         <div className="max-w-7xl mx-auto">
           <FadeIn>
             <div className="text-center mb-14">
@@ -535,7 +626,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               { icon: Zap, title: "Blockchain-ready Audit Trail", desc: "Tamper-proof, automated, transparent fund flow with complete digital audit trail.", gradient: "from-violet-500 to-purple-600" },
             ].map((f, i) => (
               <FadeIn key={i} delay={i * 0.1}>
-                <Card className="border border-slate-100 shadow-md hover:shadow-lg transition-all hover:-translate-y-1 group h-full">
+                <Card className="border border-slate-100 shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1.5 hover:scale-[1.02] group h-full">
                   <CardContent className="p-6 text-center">
                     <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${f.gradient} flex items-center justify-center mx-auto mb-5 shadow-md group-hover:scale-110 transition-transform`}>
                       <f.icon className="w-6 h-6 text-white" />
@@ -551,7 +642,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </section>
 
       {/* ═══ SECTION 8 — INVESTOR BENEFITS ═══════════════════════ */}
-      <section className="py-20 px-6 bg-gradient-to-br from-slate-50 to-sky-50/30">
+      <section className="relative py-24 px-6 bg-gradient-to-br from-slate-50 to-sky-50/30">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-200/70 to-transparent" />
         <div className="max-w-7xl mx-auto">
           <FadeIn>
             <div className="text-center mb-14">
@@ -570,7 +662,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               { icon: Gift, title: "Civic Rewards", desc: "Earn toll discounts, travel credits, green energy perks, and city-specific benefits when projects complete.", accent: "bg-violet-500" },
             ].map((b, i) => (
               <FadeIn key={i} delay={i * 0.1}>
-                <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 h-full">
+                <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 hover:scale-[1.02] h-full">
                   <div className={`w-11 h-11 rounded-lg ${b.accent} flex items-center justify-center mb-4 shadow-md`}>
                     <b.icon className="w-5 h-5 text-white" />
                   </div>
@@ -584,7 +676,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </section>
 
       {/* ═══ SECTION 9 — PROJECT IMPACT METRICS ══════════════════ */}
-      <section className="py-20 px-6 bg-white">
+      <section id="impact" className="relative py-24 px-6 bg-white">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-200/80 to-transparent" />
         <div className="max-w-7xl mx-auto">
           <FadeIn>
             <div className="text-center mb-6">
@@ -609,7 +702,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               { icon: Building2, value: "12", label: "Cities Developed", color: "text-violet-600", bg: "bg-violet-50" },
             ].map((m, i) => (
               <FadeIn key={i} delay={i * 0.1}>
-                <div className={`${m.bg} rounded-2xl p-8 text-center border border-slate-100 hover:shadow-md transition-shadow`}>
+                <div className={`${m.bg} rounded-2xl p-8 text-center border border-slate-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]`}>
                   <m.icon className={`w-8 h-8 ${m.color} mx-auto mb-3`} />
                   <p className={`text-3xl md:text-4xl font-extrabold ${m.color} mb-1`}>{m.value}</p>
                   <p className="text-sm text-slate-600 font-medium">{m.label}</p>
@@ -634,7 +727,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
                 <div className="flex flex-wrap items-center justify-center gap-4">
                   <Button
                     size="lg"
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/25 text-base px-8 py-6 h-auto"
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/25 text-base px-8 py-6 h-auto transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_16px_35px_rgba(16,185,129,0.45)]"
                     onClick={() => onNavigate("role-select")}
                   >
                     Start Investing Now <ArrowRight className="w-5 h-5 ml-2" />
@@ -642,7 +735,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-base px-8 py-6 h-auto"
+                    className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-base px-8 py-6 h-auto transition-all duration-300 hover:scale-[1.03] hover:shadow-lg"
                     onClick={() => onNavigate("role-select")}
                   >
                     Register as Issuer
@@ -732,6 +825,14 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
           </div>
         </div>
       </footer>
+
+      <button
+        onClick={() => onNavigate("role-select")}
+        className="fixed bottom-6 right-6 z-[60] inline-flex items-center gap-2 rounded-full bg-emerald-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_35px_rgba(16,185,129,0.35)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.03] hover:bg-emerald-600 hover:shadow-[0_20px_45px_rgba(16,185,129,0.5)] animate-bounce [animation-duration:2.8s]"
+        aria-label="Start Investing"
+      >
+        Start Investing <ArrowRight className="w-4 h-4" />
+      </button>
     </div>
   );
 }

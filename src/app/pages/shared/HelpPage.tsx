@@ -2,6 +2,21 @@ import { HelpCircle, Mail, Phone, MessageSquare, ChevronDown, ChevronUp, Externa
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { useState } from "react";
 
+const quickFaqCards = [
+  {
+    title: "How to invest?",
+    answer: "Go to Marketplace, open any verified project, review risk/ROI details, then invest using your wallet or selected payment mode.",
+  },
+  {
+    title: "How rewards work?",
+    answer: "Rewards are granted automatically when project milestones are verified. You can view all points and reward details in your dashboard.",
+  },
+  {
+    title: "How escrow works?",
+    answer: "Investor funds stay locked in escrow and are released only after verified milestone completion, adding transparency and protection.",
+  },
+];
+
 const faqs = [
   {
     q: "What is InfraBondX?",
@@ -71,7 +86,7 @@ export function HelpPage() {
 
       {/* Quick Help */}
       <div className="grid md:grid-cols-3 gap-4">
-        <Card className="hover:shadow-md transition-shadow cursor-default">
+        <Card className="hover:shadow-md hover:scale-[1.01] transition-all duration-200 cursor-default">
           <CardContent className="p-5 text-center space-y-2">
             <div className="w-10 h-10 mx-auto rounded-xl bg-sky-50 dark:bg-sky-950/30 flex items-center justify-center">
               <MessageSquare className="w-5 h-5 text-sky-600 dark:text-sky-400" />
@@ -80,16 +95,16 @@ export function HelpPage() {
             <p className="text-xs text-muted-foreground">Available 9 AM – 6 PM IST</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-md transition-shadow cursor-default">
+        <Card className="hover:shadow-md hover:scale-[1.01] transition-all duration-200 cursor-default">
           <CardContent className="p-5 text-center space-y-2">
             <div className="w-10 h-10 mx-auto rounded-xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center">
               <Mail className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <p className="text-sm font-semibold">Email Support</p>
-            <p className="text-xs text-muted-foreground">support@infrabondx.gov.in</p>
+            <p className="text-xs text-muted-foreground">support@infrabondx.com</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-md transition-shadow cursor-default">
+        <Card className="hover:shadow-md hover:scale-[1.01] transition-all duration-200 cursor-default">
           <CardContent className="p-5 text-center space-y-2">
             <div className="w-10 h-10 mx-auto rounded-xl bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center">
               <Phone className="w-5 h-5 text-amber-600 dark:text-amber-400" />
@@ -99,6 +114,22 @@ export function HelpPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Quick FAQ</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-3 gap-3">
+            {quickFaqCards.map((item) => (
+              <div key={item.title} className="p-4 rounded-xl border bg-card hover:bg-accent/30 hover:shadow-sm transition-all duration-200">
+                <p className="text-sm font-semibold mb-1">{item.title}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{item.answer}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* FAQ */}
       <Card>
@@ -126,7 +157,7 @@ export function HelpPage() {
             { label: "Escrow & Security Whitepaper", desc: "Technical details of our escrow system" },
             { label: "Regulatory Compliance", desc: "SEBI & RBI compliance documentation" },
           ].map((r) => (
-            <div key={r.label} className="flex items-center justify-between p-3 border rounded-xl hover:bg-accent/50 transition-colors cursor-default">
+            <div key={r.label} className="flex items-center justify-between p-3 border rounded-xl hover:bg-accent/50 hover:scale-[1.005] transition-all duration-200 cursor-default">
               <div>
                 <p className="text-sm font-medium">{r.label}</p>
                 <p className="text-xs text-muted-foreground">{r.desc}</p>
@@ -134,6 +165,18 @@ export function HelpPage() {
               <ExternalLink className="w-4 h-4 text-muted-foreground" />
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Contact Support</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="p-4 rounded-xl border bg-primary/5">
+            <p className="text-sm font-medium">Email: support@infrabondx.com</p>
+            <p className="text-xs text-muted-foreground mt-1">Typical response time: within 24 business hours.</p>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -62,7 +62,7 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
   ];
 
   const sortOptions = [
-    { id: "most-funded", label: "Most Funded" },
+    { id: "most-funded", label: "Most Invested" },
     { id: "highest-roi", label: "Highest ROI" },
     { id: "lowest-risk", label: "Lowest Risk" },
     { id: "shortest-tenure", label: "Shortest Tenure" },
@@ -166,7 +166,7 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
       <div>
         <h1 className="text-3xl font-bold mb-2">Project Marketplace</h1>
         <p className="text-muted-foreground">
-          Browse and invest in verified infrastructure projects
+          Browse and invest in verified investment opportunities
         </p>
       </div>
 
@@ -267,18 +267,24 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
                     </div>
 
                     {showVerified && (
-                      <div className="mt-2">
+                      <div className="mt-2 flex gap-2 items-center flex-wrap">
                         <VerifiedBadge size="sm" />
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-700">
+                          Live Investment Opportunity
+                        </span>
+                        {fundingProgress >= 70 && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700">
+                            High Demand Project
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
 
                   {/* Funding Progress */}
-                  <div>
+                  <div className="rounded-lg border p-3 bg-primary/5">
                     <div className="flex items-center justify-between text-sm mb-2">
-                      <span className="text-muted-foreground">
-                        Funding Progress
-                      </span>
+                      <span className="text-foreground font-semibold">Funding Progress</span>
                       <span className="font-medium">
                         {fundingProgress.toFixed(1)}%
                       </span>
@@ -291,13 +297,8 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
                       />
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>
-                        ₹{(project.funding_raised / 10000000).toFixed(1)}Cr raised
-                      </span>
-                      <span>
-                        ₹{(project.funding_target / 10000000).toFixed(1)}Cr target
-                      </span>
+                    <div className="text-xs text-muted-foreground font-medium mt-1">
+                      ₹{project.funding_raised.toLocaleString("en-IN")} raised out of ₹{project.funding_target.toLocaleString("en-IN")}
                     </div>
                   </div>
 
@@ -335,7 +336,16 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
                   </div>
 
                   {/* Risk Score */}
-                  <RiskScoreMeter score={project.risk_score || 0} showLabel={false} />
+                  <div className="rounded-lg border p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-muted-foreground">Risk Score</span>
+                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-muted">
+                        {(project.risk_level || "MEDIUM").toUpperCase()}
+                      </span>
+                    </div>
+                    <RiskScoreMeter score={project.risk_score || 0} showLabel={false} />
+                    <p className="text-xs text-muted-foreground mt-1">{project.risk_score || 0}/100</p>
+                  </div>
 
                   {/* Action Buttons */}
                   <div className="flex gap-2 pt-2">

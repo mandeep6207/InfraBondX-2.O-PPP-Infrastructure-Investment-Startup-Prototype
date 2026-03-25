@@ -3,7 +3,12 @@ import { Wallet, TrendingUp, Target, Bell, Activity, Building2, Coins, BarChart3
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { ImpactCard } from "@/app/components/ImpactCard";
-import { MyRewardsSection, categoryToRewardType } from "@/app/components/RewardBenefitsCard";
+import { MyRewardsSection, categoryToRewardType, type RewardItem } from "@/app/components/RewardBenefitsCard";
+import {
+  formatDateOnly,
+  getValidTill,
+  toRewardVerificationPayload,
+} from "@/utils/rewardVerification";
 import {
   AreaChart,
   Area,
@@ -247,6 +252,7 @@ export function InvestorDashboard({ onNavigate }: InvestorDashboardProps) {
           points: r.reward_points || 0,
           description: r.description,
           grantedAt: r.granted_at,
+          location: proj?.location || "Project Location",
         };
       });
     }
@@ -261,6 +267,7 @@ export function InvestorDashboard({ onNavigate }: InvestorDashboardProps) {
         category: cat,
         rewardType,
         points: Math.round((h.tokens || 0) * 1.5),
+        location: proj?.location || "Project Location",
       };
     });
   }, [holdings, projects, backendRewards]);
@@ -269,6 +276,38 @@ export function InvestorDashboard({ onNavigate }: InvestorDashboardProps) {
     if (totalRewardPoints > 0) return totalRewardPoints;
     return myRewards.reduce((sum, r) => sum + r.points, 0);
   }, [myRewards, totalRewardPoints]);
+
+  const handleViewRewardDetails = (reward: RewardItem) => {
+    const storedUser = localStorage.getItem("user");
+    let investorName = "Investor";
+    try {
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser);
+        investorName = parsed?.name || "Investor";
+      }
+    } catch {
+      investorName = "Investor";
+    }
+
+    const validTill = getValidTill(reward.grantedAt);
+
+    const payload = toRewardVerificationPayload({
+      user_name: investorName,
+      project_name: reward.project,
+      reward_type: reward.rewardType,
+      points: reward.points,
+      location: reward.location || "Project Location",
+      valid_till:
+        validTill !== "-"
+          ? validTill
+          : formatDateOnly(new Date(new Date().setFullYear(new Date().getFullYear() + 3))),
+      reward_id: reward.id,
+      description: reward.description || "Reward benefit unlocked for milestone completion.",
+    });
+
+    localStorage.setItem("selected_reward_payload", JSON.stringify(payload));
+    onNavigate("reward-details");
+  };
 
   return (
     <div className="space-y-6">
@@ -292,6 +331,10 @@ export function InvestorDashboard({ onNavigate }: InvestorDashboardProps) {
             {summary.projectsCount} Active Investment{summary.projectsCount !== 1 ? "s" : ""}
           </span>
         </div>
+      </div>
+
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={() => onNavigate("withdraw")}>Withdraw Funds</Button>
       </div>
 
       {/* Portfolio Summary Cards */}
@@ -482,7 +525,11 @@ export function InvestorDashboard({ onNavigate }: InvestorDashboardProps) {
       </div>
 
       {/* Rewards Section */}
-      <MyRewardsSection rewards={myRewards} totalPoints={computedTotalPoints} />
+      <MyRewardsSection
+        rewards={myRewards}
+        totalPoints={computedTotalPoints}
+        onViewDetails={handleViewRewardDetails}
+      />
 
       {/* Recommended Projects */}
       <Card className="bg-card/80 backdrop-blur-sm border-border/50 rounded-2xl overflow-hidden">

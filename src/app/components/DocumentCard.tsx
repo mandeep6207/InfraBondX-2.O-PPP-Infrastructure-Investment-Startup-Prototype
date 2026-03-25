@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FileText, Image, File, Download, Eye, X, ExternalLink } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
+import { formatDateTime } from "@/utils/dateFormatter";
 
 interface DocumentCardProps {
   doc: {
@@ -32,7 +33,7 @@ export function DocumentCard({ doc }: DocumentCardProps) {
   const { icon: IconComp, color, bgColor, label } = getFileIcon(doc.file_url, doc.doc_type);
   const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.file_url) || doc.file_url.startsWith("data:image");
   const isPdf = /\.pdf$/i.test(doc.file_url) || doc.file_url.startsWith("data:application/pdf");
-  const dateStr = doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
+  const dateStr = doc.uploaded_at ? formatDateTime(doc.uploaded_at) : "";
 
   return (
     <>

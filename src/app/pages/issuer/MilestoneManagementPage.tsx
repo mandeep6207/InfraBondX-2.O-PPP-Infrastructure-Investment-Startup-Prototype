@@ -3,6 +3,7 @@ import { Upload, CheckCircle, Clock, FileText, Image as ImageIcon } from "lucide
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { MilestoneStepper } from "@/app/components/MilestoneStepper";
+import RealMap from "@/app/components/RealMap";
 import { apiGet, apiPost, apiPostFormData } from "@/app/services/api";
 
 interface MilestoneManagementPageProps {
@@ -13,6 +14,8 @@ type IssuerProjectDTO = {
   id: number;
   title: string;
   location: string;
+  latitude?: number;
+  longitude?: number;
   funding_raised: number;
   funding_target: number;
   token_price: number;
@@ -290,6 +293,24 @@ export function MilestoneManagementPage({ onNavigate }: MilestoneManagementPageP
           </div>
         </CardContent>
       </Card>
+
+      {selectedProject && (
+        <Card>
+          <CardHeader>
+            <CardTitle>📍 Project Location</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Lat: {(selectedProject.latitude ?? 20.5937).toFixed(4)} | Lng: {(selectedProject.longitude ?? 78.9629).toFixed(4)}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <RealMap
+              lat={selectedProject.latitude || 20.5937}
+              lng={selectedProject.longitude || 78.9629}
+              title={selectedProject.title}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid md:grid-cols-3 gap-6">
         {/* Milestone Timeline */}

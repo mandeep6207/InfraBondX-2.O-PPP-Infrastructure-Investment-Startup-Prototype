@@ -13,6 +13,9 @@ import {
   adminUpdateProjectStatus, adminReleaseMilestoneFunds,
   adminGetProjectDocuments, adminRefundProject,
 } from "@/app/services/admin";
+import { sendProjectApprovedEmail } from "@/utils/emailService";
+import { formatDateTime } from "@/utils/dateFormatter";
+import { toast } from "sonner";
 
 type AdminProjectDTO = {
   id: number;
@@ -149,6 +152,36 @@ export function ApproveProjectsPage({ onNavigate }: ApproveProjectsPageProps) {
       setStatusUpdating(true);
       const res = await adminUpdateProjectStatus(projectId, status);
       if (res?.error) { alert(res.error); return; }
+
+      if (status === "ACTIVE") {
+        const projectRef =
+          projects.find((p) => p.id === projectId) ||
+          (projectDetails && projectDetails.id === projectId ? projectDetails : null);
+
+        const mockInvestors = [
+          { user_name: "Aarav Sharma", to_email: "aarav.demo@infrabondx.com" },
+          { user_name: "Priya Mehta", to_email: "priya.demo@infrabondx.com" },
+          { user_name: "Rahul Verma", to_email: "rahul.demo@infrabondx.com" },
+        ];
+
+        let successCount = 0;
+        for (const investor of mockInvestors) {
+          const emailResult = await sendProjectApprovedEmail({
+            user_name: investor.user_name,
+            project_name: projectRef?.title || "InfraBondX Opportunity",
+            location: projectRef?.location || "India",
+            roi: projectRef?.roi_percent || 0,
+            min_invest: (projectRef as any)?.token_price || 100,
+            to_email: investor.to_email,
+          });
+          if (emailResult.success) successCount += 1;
+        }
+
+        toast.success("Project approved", {
+          description: `Email notifications sent: ${successCount}/${mockInvestors.length}`,
+        });
+      }
+
       alert(`Project status updated to ${status}`);
       closeModal();
       fetchProjects();
@@ -404,7 +437,7 @@ export function ApproveProjectsPage({ onNavigate }: ApproveProjectsPageProps) {
 
                             {m.approved_at && (
                               <p className="text-xs text-muted-foreground mb-2">
-                                Completed: {new Date(m.approved_at).toLocaleDateString("en-IN")}
+                                Completed: {formatDateTime(m.approved_at)}
                               </p>
                             )}
 
@@ -441,7 +474,7 @@ export function ApproveProjectsPage({ onNavigate }: ApproveProjectsPageProps) {
                           <div>
                             <p className="font-medium">{d.filename}</p>
                             <p className="text-xs text-muted-foreground">
-                              {d.doc_type} • {new Date(d.uploaded_at).toLocaleDateString("en-IN")}
+                              {d.doc_type} • {formatDateTime(d.uploaded_at)}
                               {d.description ? ` • ${d.description}` : ""}
                             </p>
                           </div>

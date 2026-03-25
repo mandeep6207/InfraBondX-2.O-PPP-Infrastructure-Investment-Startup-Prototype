@@ -40,7 +40,7 @@ const demoCredentials: Record<UserRole, { email: string; password: string; label
   issuer: {
     email: "issuer@infrabondx.com",
     password: "issuer123",
-    label: "Issuer",
+    label: "Project Developer",
     icon: Building2,
     color: "text-sky-700",
     bgColor: "bg-sky-50 border-sky-200 hover:bg-sky-100",
@@ -48,7 +48,7 @@ const demoCredentials: Record<UserRole, { email: string; password: string; label
   admin: {
     email: "admin@infrabondx.com",
     password: "admin123",
-    label: "Admin",
+    label: "Platform",
     icon: ShieldCheck,
     color: "text-amber-700",
     bgColor: "bg-amber-50 border-amber-200 hover:bg-amber-100",
@@ -57,6 +57,9 @@ const demoCredentials: Record<UserRole, { email: string; password: string; label
 
 export function LoginPage({ role, onBack, onLoginSuccess }: LoginPageProps) {
   const demo = demoCredentials[role];
+  const [loginMode, setLoginMode] = useState<"quick" | "secure">(
+    localStorage.getItem("login_mode") === "secure" ? "secure" : "quick"
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -76,6 +79,9 @@ export function LoginPage({ role, onBack, onLoginSuccess }: LoginPageProps) {
       if (!res.ok || !data?.token || !data?.user) {
         setErrorMsg(data?.error || "Login failed");
         return;
+      }
+      if (role === "investor") {
+        localStorage.setItem("login_mode", loginMode);
       }
       login(data.user, data.token);
       onLoginSuccess();
@@ -130,6 +136,41 @@ export function LoginPage({ role, onBack, onLoginSuccess }: LoginPageProps) {
             </div>
 
             {/* One-click demo login */}
+            {role === "investor" && (
+              <div className="mb-5 p-3 rounded-xl border border-slate-200 bg-slate-50">
+                <p className="text-xs font-semibold text-slate-700 mb-2">Login Mode</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setLoginMode("quick")}
+                    className={`h-9 rounded-lg border text-xs font-semibold transition-colors ${
+                      loginMode === "quick"
+                        ? "bg-[#0c4a6e] text-white border-[#0c4a6e]"
+                        : "bg-white text-slate-700 border-slate-200"
+                    }`}
+                  >
+                    Quick Login
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLoginMode("secure")}
+                    className={`h-9 rounded-lg border text-xs font-semibold transition-colors ${
+                      loginMode === "secure"
+                        ? "bg-[#0c4a6e] text-white border-[#0c4a6e]"
+                        : "bg-white text-slate-700 border-slate-200"
+                    }`}
+                  >
+                    Full Secure
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-2">
+                  {loginMode === "quick"
+                    ? "Quick mode signs in directly (default)."
+                    : "Secure mode requires KYC after login."}
+                </p>
+              </div>
+            )}
+
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-3">
                 <Fingerprint className="w-4 h-4 text-emerald-600" />

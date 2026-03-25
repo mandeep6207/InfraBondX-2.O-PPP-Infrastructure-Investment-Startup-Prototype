@@ -1,6 +1,7 @@
 import { useState, type ReactElement } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Gift, ChevronRight, Sparkles, Star } from "lucide-react";
+import { formatDateTime } from "@/utils/dateFormatter";
 
 /* ──────────────── Reward Type SVG Logos ──────────────── */
 
@@ -378,7 +379,7 @@ export function RewardBenefitsCard({ category, projectName }: RewardBenefitsCard
 
 /* ──────────────── Investor Dashboard: My Rewards Section ──────────────── */
 
-interface RewardItem {
+export interface RewardItem {
   id: number;
   project: string;
   category: string;
@@ -386,14 +387,16 @@ interface RewardItem {
   points: number;
   description?: string;
   grantedAt?: string;
+  location?: string;
 }
 
 interface MyRewardsSectionProps {
   rewards: RewardItem[];
   totalPoints: number;
+  onViewDetails?: (reward: RewardItem) => void;
 }
 
-export function MyRewardsSection({ rewards, totalPoints }: MyRewardsSectionProps) {
+export function MyRewardsSection({ rewards, totalPoints, onViewDetails }: MyRewardsSectionProps) {
   const [selectedType, setSelectedType] = useState<string | null>(null);
 
   // Group rewards by type
@@ -484,7 +487,8 @@ export function MyRewardsSection({ rewards, totalPoints }: MyRewardsSectionProps
                 return (
                   <div
                     key={reward.id}
-                    className="group p-3 rounded-xl border transition-all duration-200 hover:shadow-md cursor-default"
+                    onClick={() => onViewDetails?.(reward)}
+                    className="group p-3 rounded-xl border transition-all duration-200 hover:shadow-md cursor-pointer"
                     style={{ backgroundColor: cfg.bgColor, borderColor: cfg.color + "25" }}
                   >
                     <div className="flex items-start gap-3">
@@ -511,6 +515,24 @@ export function MyRewardsSection({ rewards, totalPoints }: MyRewardsSectionProps
                             {reward.description}
                           </p>
                         )}
+                        {reward.grantedAt && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            Granted: {formatDateTime(reward.grantedAt)}
+                          </p>
+                        )}
+                        <div className="mt-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onViewDetails?.(reward);
+                            }}
+                            className="text-[11px] font-semibold px-2.5 py-1 rounded-md border"
+                            style={{ borderColor: cfg.color + "70", color: cfg.color, backgroundColor: "#ffffff" }}
+                          >
+                            View Details
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
